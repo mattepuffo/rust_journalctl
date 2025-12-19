@@ -2,7 +2,7 @@ use crate::load_journalctl_logs;
 use crate::models::log_entry::LogEntry;
 use crate::models::message::Message;
 use iced::widget::{Column, button, container, row, scrollable, text, text_input};
-use iced::{Application, Element, Length, Task, Theme};
+use iced::{Application, Element, Length, Renderer, Task, Theme};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -92,7 +92,7 @@ impl JournalApp {
         }
     }
 
-    fn view(&self) -> Element<'_, Message> {
+    pub fn view(&self) -> Element<'_, Message> {
         let title = text("Journalctl Viewer").size(32).width(Length::Fill);
 
         let controls = row![

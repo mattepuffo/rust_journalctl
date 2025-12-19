@@ -15,11 +15,14 @@ fn main() -> iced::Result {
 
     let window_settings = window::Settings {
         size: Size::new(window_width, window_height),
+        resizable: false,
         ..Default::default()
     };
 
-    iced::application(JournalApp::new(), JournalApp::update(), JournalApp::view())
-        .theme(JournalApp::theme())
+    iced::application(JournalApp::default, JournalApp::update, JournalApp::view)
+        .theme(JournalApp::theme)
+        .title("Journalctl Viewer")
+        .window(window_settings)
         .run()
 
     // iced::run(JournalApp::update, JournalApp::view)
