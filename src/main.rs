@@ -3,10 +3,26 @@ mod models;
 
 use crate::app::app::{JournalApp, JournalEntry};
 use crate::models::log_entry::LogEntry;
+use iced::{Size, window};
+use rdev::display_size;
 use std::process::Command;
 
 fn main() -> iced::Result {
-    iced::run(JournalApp::update, JournalApp::view)
+    let (w, h) = display_size().unwrap();
+
+    let window_width = w as f32 * 0.8;
+    let window_height = h as f32 * 0.8;
+
+    let window_settings = window::Settings {
+        size: Size::new(window_width, window_height),
+        ..Default::default()
+    };
+
+    iced::application(JournalApp::new(), JournalApp::update(), JournalApp::view())
+        .theme(JournalApp::theme())
+        .run()
+
+    // iced::run(JournalApp::update, JournalApp::view)
 }
 
 pub async fn load_journalctl_logs(line_count: &str) -> Result<Vec<LogEntry>, String> {
