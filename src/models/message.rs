@@ -7,4 +7,7 @@ pub enum Message {
     UpdateFilter(String),
     UpdateLineCount(String),
     ClearFilter,
+    ShowCurrentBoot,
+    ShowBootList,
+    Export,
 }

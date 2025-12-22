@@ -1,8 +1,8 @@
 use crate::load_journalctl_logs;
 use crate::models::log_entry::LogEntry;
 use crate::models::message::Message;
-use iced::widget::{Column, button, container, row, scrollable, text, text_input};
-use iced::{Application, Element, Length, Renderer, Task, Theme};
+use iced::widget::{Column, Row, button, container, row, scrollable, text, text_input};
+use iced::{Element, Length, Task, Theme};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -29,9 +29,9 @@ pub struct JournalApp {
 }
 
 impl JournalApp {
-    pub fn new() -> (Self, Task<Message>) {
-        (Self::default(), Task::none())
-    }
+    // pub fn new() -> (Self, Task<Message>) {
+    //     (Self::default(), Task::none())
+    // }
 
     pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
@@ -72,6 +72,20 @@ impl JournalApp {
                 self.apply_filter();
                 Task::none()
             }
+            Message::ShowCurrentBoot => {
+                // Implementa qui la logica per mostrare il boot corrente
+                // journalctl -b 0
+                Task::none()
+            }
+            Message::ShowBootList => {
+                // Implementa qui la logica per mostrare la lista dei boot
+                // journalctl --list-boots
+                Task::none()
+            }
+            Message::Export => {
+                // Implementa qui la logica per esportare i log
+                Task::none()
+            }
         }
     }
 
@@ -94,6 +108,14 @@ impl JournalApp {
 
     pub fn view(&self) -> Element<'_, Message> {
         let title = text("Journalctl Viewer").size(32).width(Length::Fill);
+
+        let action_buttons = row![
+            button("Mostra il boot log corrente").on_press(Message::ShowCurrentBoot),
+            button("Mostra la lista dei boot").on_press(Message::ShowBootList),
+            button("Esporta").on_press(Message::Export),
+        ]
+        .spacing(10)
+        .padding(10);
 
         let controls = row![
             text("Righe:").size(16),
@@ -122,35 +144,82 @@ impl JournalApp {
             .size(14)
         };
 
+        let table_header: Row<'_, Message, Theme, iced::Renderer> = row![
+            text("#").size(12).width(50),
+            text("Priorità").size(12).width(80),
+            text("Unità").size(12).width(250),
+            text("Messaggio").size(12).width(Length::Fill),
+        ]
+        .spacing(10)
+        .padding(5);
+
+        let header_container = container(table_header).style(|_theme: &Theme| container::Style {
+            background: Some(iced::Background::Color(iced::Color::from_rgb(
+                0.2, 0.2, 0.25,
+            ))),
+            border: iced::Border {
+                color: iced::Color::from_rgb(0.3, 0.3, 0.35),
+                width: 1.0,
+                radius: 0.0.into(),
+            },
+            ..Default::default()
+        });
+
         let mut log_list = Column::new().spacing(2).padding(10);
 
         for (idx, log) in self.filtered_logs.iter().enumerate() {
             let priority_color = match log.priority.as_str() {
-                "0" | "1" | "2" | "3" => iced::Color::from_rgb(0.9, 0.2, 0.2), // Rosso
-                "4" => iced::Color::from_rgb(0.9, 0.6, 0.0),                   // Arancione
-                "5" => iced::Color::from_rgb(0.2, 0.6, 0.9),                   // Blu
-                _ => iced::Color::from_rgb(0.5, 0.5, 0.5),                     // Grigio
+                "0" | "1" | "2" | "3" => iced::Color::from_rgb(0.9, 0.2, 0.2),
+                "4" => iced::Color::from_rgb(0.9, 0.6, 0.0),
+                "5" => iced::Color::from_rgb(0.2, 0.6, 0.9),
+                _ => iced::Color::from_rgb(0.5, 0.5, 0.5),
             };
 
             let log_row = row![
-                text(format!("{:3}.", idx + 1)).size(12),
+                text(format!("{}", idx + 1)).size(12).width(50),
                 text(&log.priority_text)
                     .size(12)
-                    .width(60)
+                    .width(80)
                     .color(priority_color),
-                text(&log.unit).size(12).width(200),
-                text(&log.message).size(12),
+                text(&log.unit).size(12).width(250),
+                text(&log.message).size(12).width(Length::Fill),
             ]
-            .spacing(10);
+            .spacing(10)
+            .padding(5);
 
-            log_list = log_list.push(log_row);
+            let row_container = container(log_row).style(move |_theme: &Theme| {
+                let bg_color = if idx % 2 == 0 {
+                    iced::Color::from_rgba(0.15, 0.15, 0.18, 1.0)
+                } else {
+                    iced::Color::from_rgba(0.12, 0.12, 0.15, 1.0)
+                };
+
+                container::Style {
+                    background: Some(iced::Background::Color(bg_color)),
+                    border: iced::Border {
+                        color: iced::Color::from_rgb(0.2, 0.2, 0.25),
+                        width: 0.5,
+                        radius: 0.0.into(),
+                    },
+                    ..Default::default()
+                }
+            });
+
+            log_list = log_list.push(row_container);
         }
 
         let logs_scroll = scrollable(log_list).height(Length::Fill);
 
-        let content = iced::widget::column![title, controls, status, logs_scroll]
-            .spacing(10)
-            .padding(20);
+        let content = iced::widget::column![
+            title,
+            action_buttons,
+            controls,
+            status,
+            header_container,
+            logs_scroll
+        ]
+        .spacing(10)
+        .padding(20);
 
         container(content)
             .width(Length::Fill)
