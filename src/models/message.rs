@@ -1,3 +1,4 @@
+use crate::models::boot_info::BootInfo;
 use crate::models::log_entry::LogEntry;
 
 #[derive(Debug, Clone)]
@@ -9,5 +10,7 @@ pub enum Message {
     ClearFilter,
     ShowCurrentBoot,
     ShowBootList,
+    BootListLoaded(Result<Vec<BootInfo>, String>),
+    SelectBoot(i32),
     Export,
 }

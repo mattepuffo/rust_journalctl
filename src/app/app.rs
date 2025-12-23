@@ -1,4 +1,5 @@
 use crate::load_journalctl_logs;
+use crate::models::boot_info::BootInfo;
 use crate::models::log_entry::LogEntry;
 use crate::models::message::Message;
 use iced::widget::{Column, Row, button, container, row, scrollable, text, text_input};
@@ -26,6 +27,8 @@ pub struct JournalApp {
     pub line_count: String,
     pub loading: bool,
     pub error_message: Option<String>,
+    pub boot_list: Vec<BootInfo>,
+    pub show_boot_list: bool,
 }
 
 impl JournalApp {
@@ -73,14 +76,58 @@ impl JournalApp {
                 Task::none()
             }
             Message::ShowCurrentBoot => {
-                // Implementa qui la logica per mostrare il boot corrente
-                // journalctl -b 0
-                Task::none()
+                self.loading = true;
+                self.error_message = None;
+
+                Task::perform(
+                    async move {
+                        crate::load_journalctl_logs_with_args(vec![
+                            "-b".to_string(),
+                            "0".to_string(),
+                        ])
+                        .await
+                    },
+                    Message::LogsLoaded,
+                )
             }
             Message::ShowBootList => {
-                // Implementa qui la logica per mostrare la lista dei boot
-                // journalctl --list-boots
+                self.loading = true;
+                self.error_message = None;
+                self.show_boot_list = true;
+
+                Task::perform(
+                    async move { crate::load_boot_list().await },
+                    Message::BootListLoaded,
+                )
+            }
+            Message::BootListLoaded(result) => {
+                self.loading = false;
+                match result {
+                    Ok(boots) => {
+                        self.boot_list = boots;
+                    }
+                    Err(e) => {
+                        self.error_message = Some(e);
+                        self.show_boot_list = false;
+                    }
+                }
                 Task::none()
+            }
+            Message::SelectBoot(boot_offset) => {
+                self.loading = true;
+                self.error_message = None;
+                self.show_boot_list = false;
+
+                Task::perform(
+                    async move {
+                        crate::load_journalctl_logs_with_args(vec![
+                            "-b".to_string(),
+                            boot_offset.to_string(),
+                        ])
+                        .await
+                    },
+                    Message::LogsLoaded,
+                )
             }
             Message::Export => {
                 // Implementa qui la logica per esportare i log
@@ -241,6 +288,8 @@ impl Default for JournalApp {
             line_count: "100".to_string(),
             loading: false,
             error_message: None,
+            boot_list: Vec::new(),
+            show_boot_list: false,
         }
     }
 }
