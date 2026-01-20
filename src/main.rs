@@ -116,7 +116,6 @@ pub async fn load_boot_list() -> Result<Vec<BootInfo>, String> {
     let mut boots = Vec::new();
 
     for line in output_str.lines() {
-        // Formato: -5 a1b2c3d4... 2024-01-15 10:23:45 CET—2024-01-15 18:45:32 CET
         let parts: Vec<&str> = line.split_whitespace().collect();
         if parts.len() >= 5 {
             let boot_offset = parts[0].parse::<i32>().unwrap_or(0);

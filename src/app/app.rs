@@ -5,7 +5,6 @@ use crate::models::message::Message;
 use iced::widget::{Column, Row, button, container, row, scrollable, text, text_input};
 use iced::{Element, Length, Task, Theme};
 use serde::Deserialize;
-
 #[derive(Debug, Deserialize)]
 pub struct JournalEntry {
     #[serde(rename = "MESSAGE")]
