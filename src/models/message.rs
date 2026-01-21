@@ -13,4 +13,5 @@ pub enum Message {
     BootListLoaded(Result<Vec<BootInfo>, String>),
     SelectBoot(i32),
     Export,
+    ExportFinished(Result<String, String>),
 }

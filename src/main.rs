@@ -2,11 +2,11 @@ mod app;
 mod models;
 
 use crate::app::app::{JournalApp, JournalEntry};
+use crate::models::boot_info::BootInfo;
 use crate::models::log_entry::LogEntry;
 use iced::{Size, window};
 use rdev::display_size;
 use std::process::Command;
-use crate::models::boot_info::BootInfo;
 
 fn main() -> iced::Result {
     let (w, h) = display_size().unwrap();
@@ -137,4 +137,27 @@ pub async fn load_boot_list() -> Result<Vec<BootInfo>, String> {
     }
 
     Ok(boots)
+}
+
+pub fn export_to_csv(
+    path: &std::path::Path,
+    logs: Vec<LogEntry>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut wtr = csv::Writer::from_path(path)?;
+
+    wtr.write_record(&["Timestamp", "Priority", "Level", "Unit", "Message"])?;
+
+    for log in logs {
+        wtr.write_record(&[
+            &log.timestamp,
+            &log.priority,
+            &log.priority_text,
+            &log.unit,
+            &log.message,
+        ])?;
+    }
+
+    wtr.flush()?;
+    
+    Ok(())
 }

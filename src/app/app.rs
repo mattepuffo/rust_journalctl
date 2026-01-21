@@ -5,6 +5,7 @@ use crate::models::message::Message;
 use iced::widget::{Column, Row, button, container, row, scrollable, text, text_input};
 use iced::{Element, Length, Task, Theme};
 use serde::Deserialize;
+
 #[derive(Debug, Deserialize)]
 pub struct JournalEntry {
     #[serde(rename = "MESSAGE")]
@@ -49,6 +50,7 @@ impl JournalApp {
             }
             Message::LogsLoaded(result) => {
                 self.loading = false;
+
                 match result {
                     Ok(logs) => {
                         self.logs = logs;
@@ -101,6 +103,7 @@ impl JournalApp {
             }
             Message::BootListLoaded(result) => {
                 self.loading = false;
+
                 match result {
                     Ok(boots) => {
                         self.boot_list = boots;
@@ -129,7 +132,35 @@ impl JournalApp {
                 )
             }
             Message::Export => {
-                // Implementa qui la logica per esportare i log
+                let logs_to_export = self.logs.clone();
+
+                Task::perform(
+                    async move {
+                        let file_path = rfd::AsyncFileDialog::new()
+                            .add_filter("CSV", &["csv"])
+                            .set_file_name("journal_export.csv")
+                            .save_file()
+                            .await;
+
+                        if let Some(file_handle) = file_path {
+                            let path = file_handle.path();
+
+                            match crate::export_to_csv(path, logs_to_export) {
+                                Ok(_) => Ok("Esportazione completata!".to_string()),
+                                Err(e) => Err(format!("Errore durante il salvataggio: {}", e)),
+                            }
+                        } else {
+                            Err("Operazione annullata".to_string())
+                        }
+                    },
+                    Message::ExportFinished,
+                )
+            }
+            Message::ExportFinished(result) => {
+                match result {
+                    Ok(msg) => println!("{}", msg),
+                    Err(e) => self.error_message = Some(e),
+                }
                 Task::none()
             }
         }
@@ -155,10 +186,19 @@ impl JournalApp {
     pub fn view(&self) -> Element<'_, Message> {
         let title = text("Journalctl Viewer").size(32).width(Length::Fill);
 
+        let export_button = {
+            let b = button("Esporta");
+            if !self.logs.is_empty() {
+                b.on_press(Message::Export)
+            } else {
+                b
+            }
+        };
+
         let action_buttons = row![
             button("Mostra il boot log corrente").on_press(Message::ShowCurrentBoot),
             button("Mostra la lista dei boot").on_press(Message::ShowBootList),
-            button("Esporta").on_press(Message::Export),
+            export_button,
         ]
         .spacing(10)
         .padding(10);
@@ -274,7 +314,7 @@ impl JournalApp {
     }
 
     pub fn theme(&self) -> Theme {
-        Theme::TokyoNightStorm
+        Theme::Ferra
     }
 }
 
