@@ -41,6 +41,8 @@ impl JournalApp {
             Message::LoadLogs => {
                 self.loading = true;
                 self.error_message = None;
+                self.show_boot_list = false;
+
                 let line_count = self.line_count.clone();
 
                 Task::perform(
@@ -79,6 +81,7 @@ impl JournalApp {
             Message::ShowCurrentBoot => {
                 self.loading = true;
                 self.error_message = None;
+                self.show_boot_list = false;
 
                 Task::perform(
                     async move {
@@ -103,14 +106,13 @@ impl JournalApp {
             }
             Message::BootListLoaded(result) => {
                 self.loading = false;
-
                 match result {
                     Ok(boots) => {
                         self.boot_list = boots;
+                        self.error_message = None;
                     }
                     Err(e) => {
                         self.error_message = Some(e);
-                        self.show_boot_list = false;
                     }
                 }
                 Task::none()
@@ -203,6 +205,23 @@ impl JournalApp {
         .spacing(10)
         .padding(10);
 
+        let main_content = if self.show_boot_list {
+            self.view_boot_list()
+        } else {
+            self.view_logs()
+        };
+
+        let content = iced::widget::column![title, action_buttons, main_content]
+            .spacing(10)
+            .padding(20);
+
+        container(content)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .into()
+    }
+
+    fn view_logs(&self) -> Element<'_, Message> {
         let controls = row![
             text("Righe:").size(16),
             text_input("100", &self.line_count)
@@ -296,20 +315,84 @@ impl JournalApp {
 
         let logs_scroll = scrollable(log_list).height(Length::Fill);
 
-        let content = iced::widget::column![
-            title,
-            action_buttons,
-            controls,
-            status,
-            header_container,
-            logs_scroll
+        iced::widget::column![controls, status, header_container, logs_scroll]
+            .spacing(10)
+            .into()
+    }
+
+    fn view_boot_list(&self) -> Element<'_, Message> {
+        let status = if self.loading {
+            text("Caricamento lista boot...").size(14)
+        } else if let Some(ref error) = self.error_message {
+            text(format!("Errore: {}", error)).size(14)
+        } else {
+            text(format!("Boot trovati: {}", self.boot_list.len())).size(14)
+        };
+
+        let table_header: Row<'_, Message, Theme, iced::Renderer> = row![
+            text("Offset").size(12).width(80),
+            text("Boot ID").size(12).width(300),
+            text("Primo avvio").size(12).width(200),
+            text("Ultimo avvio").size(12).width(200),
+            text("Azioni").size(12).width(100),
         ]
         .spacing(10)
-        .padding(20);
+        .padding(5);
 
-        container(content)
-            .width(Length::Fill)
-            .height(Length::Fill)
+        let header_container = container(table_header).style(|_theme: &Theme| container::Style {
+            background: Some(iced::Background::Color(iced::Color::from_rgb(
+                0.2, 0.2, 0.25,
+            ))),
+            border: iced::Border {
+                color: iced::Color::from_rgb(0.3, 0.3, 0.35),
+                width: 1.0,
+                radius: 0.0.into(),
+            },
+            ..Default::default()
+        });
+
+        let mut boot_rows = Column::new().spacing(2).padding(10);
+
+        for (idx, boot) in self.boot_list.iter().enumerate() {
+            let boot_offset = boot.boot_offset;
+
+            let boot_row = row![
+                text(format!("{}", boot.boot_offset)).size(12).width(80),
+                text(&boot.boot_id).size(12).width(300),
+                text(&boot.first_entry).size(12).width(200),
+                text(&boot.last_entry).size(12).width(200),
+                button("Seleziona")
+                    .on_press(Message::SelectBoot(boot_offset))
+                    .padding(5),
+            ]
+            .spacing(10)
+            .padding(5);
+
+            let row_container = container(boot_row).style(move |_theme: &Theme| {
+                let bg_color = if idx % 2 == 0 {
+                    iced::Color::from_rgba(0.15, 0.15, 0.18, 1.0)
+                } else {
+                    iced::Color::from_rgba(0.12, 0.12, 0.15, 1.0)
+                };
+
+                container::Style {
+                    background: Some(iced::Background::Color(bg_color)),
+                    border: iced::Border {
+                        color: iced::Color::from_rgb(0.2, 0.2, 0.25),
+                        width: 0.5,
+                        radius: 0.0.into(),
+                    },
+                    ..Default::default()
+                }
+            });
+
+            boot_rows = boot_rows.push(row_container);
+        }
+
+        let boots_scroll = scrollable(boot_rows).height(Length::Fill);
+
+        iced::widget::column![status, header_container, boots_scroll]
+            .spacing(10)
             .into()
     }
 
