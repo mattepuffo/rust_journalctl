@@ -187,6 +187,7 @@ impl JournalApp {
 
     pub fn view(&self) -> Element<'_, Message> {
         let title = text("Journalctl Viewer").size(32).width(Length::Fill);
+        let version = env!("CARGO_PKG_VERSION");
 
         let export_button = {
             let b = button("Esporta");
@@ -211,7 +212,7 @@ impl JournalApp {
             self.view_logs()
         };
 
-        let content = iced::widget::column![title, action_buttons, main_content]
+        let content = iced::widget::column![title, version, action_buttons, main_content]
             .spacing(10)
             .padding(20);
 
